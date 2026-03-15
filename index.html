@@ -3,12 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diff3MF | Slicer Setting Comparison</title>
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Diff3MF | Compare & Sync 3MF Slicer Settings (Bambu, Orca, Prusa)</title>
+    <meta name="description" content="The ultimate web-based diff tool for 3D printing. Compare 3MF project files, analyze print settings, and sync profiles between Bambu Studio, OrcaSlicer, and PrusaSlicer instantly.">
+    <meta name="keywords" content="3mf diff, slicer settings comparison, bambu studio profile sync, orcaslicer settings, prusaslicer 3mf, 3d printing tools, techjeeper">
+    <meta name="author" content="TechJeeper Designs">
+    <link rel="canonical" href="https://diff3mf.com" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://diff3mf.com/">
+    <meta property="og:title" content="Diff3MF | Compare & Sync 3MF Slicer Settings">
+    <meta property="og:description" content="Instantly compare and transfer print settings between 3MF files. Optimized for Bambu Studio, OrcaSlicer, and PrusaSlicer.">
+    <meta property="og:image" content="https://techjeeper.com/wp-content/uploads/2024/01/diff3mf-preview.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://diff3mf.com/">
+    <meta property="twitter:title" content="Diff3MF | Compare & Sync 3MF Slicer Settings">
+    <meta property="twitter:description" content="The pro tool for 3D makers to sync slicer profiles across 3MF files. Works entirely in your browser.">
+    <meta property="twitter:image" content="https://techjeeper.com/wp-content/uploads/2024/01/diff3mf-preview.jpg">
+
+    <!-- Structured Data for WebApp -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Diff3MF",
+      "url": "https://diff3mf.com",
+      "description": "A browser-based tool to compare and sync 3D print settings between 3MF files.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "All",
+      "author": {
+        "@type": "Organization",
+        "name": "TechJeeper Designs",
+        "url": "https://techjeeper.com"
+      }
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
@@ -17,16 +57,18 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        /* Hidden H1 for SEO without breaking UI */
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     </style>
 </head>
 <body>
+    <h1 class="sr-only">Diff3MF - 3D Print Settings Comparison Tool for Bambu Studio, OrcaSlicer, and PrusaSlicer</h1>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
         // --- Helpers & Logic ---
-        
         const CATEGORY_MAP = {
             'Quality': ['layer_height', 'width', 'line_width', 'precision', 'resolution', 'seam', 'fuzzy', 'ironing'],
             'Strength': ['wall', 'perimeter', 'infill', 'shell', 'top_surface', 'bottom_surface', 'sparse', 'solid', 'loops'],
@@ -50,7 +92,6 @@
             lines.forEach(line => {
                 const trimmed = line.trim();
                 if (!trimmed || trimmed.startsWith('<') || trimmed.startsWith(';') || trimmed.startsWith('#') || trimmed.startsWith('[')) return;
-                
                 const parts = trimmed.split('=');
                 if (parts.length >= 2) {
                     const key = parts[0].trim();
@@ -205,14 +246,14 @@
             return (
                 <div className="min-h-screen flex flex-col p-4 md:p-8 max-w-7xl mx-auto">
                     {/* Main Content Area */}
-                    <div className="flex-1">
+                    <main className="flex-1">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 text-center md:text-left">
-                            <div>
-                                <h1 className="text-3xl font-black tracking-tight flex items-center justify-center md:justify-start gap-2 text-white">
+                            <header>
+                                <div className="text-3xl font-black tracking-tight flex items-center justify-center md:justify-start gap-2 text-white">
                                     <span className="text-blue-500">DIFF</span>3MF
-                                </h1>
+                                </div>
                                 <p className="text-slate-400 text-sm italic">Synchronizing the Maker community, one profile at a time.</p>
-                            </div>
+                            </header>
                             {fileB.name && (
                                 <button onClick={exportFile} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/40">
                                     <Icon name="download" /> Export Modified 3MF
@@ -226,7 +267,7 @@
                                 { label: 'Target (File B)', state: fileB, side: 'B', color: 'emerald' }
                             ].map(box => (
                                 <div key={box.side} className={`relative p-6 rounded-2xl border-2 border-dashed transition-all bg-slate-900/50 ${box.state.name ? `border-${box.color}-500/50 bg-${box.color}-500/5` : 'border-slate-800 hover:border-slate-600'}`}>
-                                    <input type="file" accept=".3mf" onChange={(e) => handleUpload(e, box.side)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                                    <input type="file" aria-label={box.label} accept=".3mf" onChange={(e) => handleUpload(e, box.side)} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-xl ${box.state.name ? (box.side === 'A' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-slate-800 text-slate-400'}`}>
                                             <Icon name="upload" />
@@ -241,19 +282,19 @@
                         </div>
 
                         {fileA.name && fileB.name ? (
-                            <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl flex flex-col h-[60vh]">
+                            <section className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl flex flex-col h-[60vh]">
                                 <div className="p-4 border-b border-slate-800 flex flex-wrap items-center gap-4 bg-slate-900/80 backdrop-blur sticky top-0 z-20">
                                     <div className="relative flex-1 min-w-[240px]">
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2"><Icon name="search" /></div>
-                                        <input type="text" placeholder="Search settings..." className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-300" value={search} onChange={e => setSearch(e.target.value)} />
+                                        <input type="text" placeholder="Search settings..." aria-label="Search Settings" className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-300" value={search} onChange={e => setSearch(e.target.value)} />
                                     </div>
-                                    <div className="flex gap-1 overflow-x-auto pb-1 custom-scrollbar">
+                                    <nav className="flex gap-1 overflow-x-auto pb-1 custom-scrollbar">
                                         {['All', 'Quality', 'Strength', 'Speed', 'Support', 'Cooling', 'Filament', 'Others'].map(cat => (
                                             <button key={cat} onClick={() => setActiveTab(cat)} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeTab === cat ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
                                                 {cat}
                                             </button>
                                         ))}
-                                    </div>
+                                    </nav>
                                     <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 whitespace-nowrap">
                                         <input type="checkbox" checked={showOnlyDiffs} onChange={e => setShowOnlyDiffs(e.target.checked)} className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-blue-500 focus:ring-0" />
                                         Diffs Only
@@ -272,7 +313,7 @@
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/50">
                                             {diffList.length === 0 ? (
-                                                <tr><td colSpan={4} className="p-20 text-center text-slate-600 italic">No slicer settings found.</td></tr>
+                                                <tr><td colSpan={4} className="p-20 text-center text-slate-600 italic text-balance">No slicer settings found matching your criteria. Try adjusting your filters.</td></tr>
                                             ) : (
                                                 diffList.map((item, idx) => (
                                                     <tr key={`${item.path}-${item.key}-${idx}`} className="group hover:bg-slate-800/30 transition-colors">
@@ -290,7 +331,7 @@
                                                         </td>
                                                         <td className="p-4 text-center">
                                                             {item.isDiff && (
-                                                                <button onClick={() => transferSetting(item.path, item.key)} className="p-2 rounded-lg bg-slate-800 hover:bg-blue-600 text-white transition-all transform hover:scale-110 active:scale-95 shadow-lg shadow-black/50">
+                                                                <button onClick={() => transferSetting(item.path, item.key)} aria-label={`Sync ${item.key}`} className="p-2 rounded-lg bg-slate-800 hover:bg-blue-600 text-white transition-all transform hover:scale-110 active:scale-95 shadow-lg shadow-black/50">
                                                                     <Icon name="sync" />
                                                                 </button>
                                                             )}
@@ -304,7 +345,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </section>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-40">
                                 <Icon name="alert" />
@@ -312,7 +353,7 @@
                                 <p className="text-sm mt-2 text-center max-w-xs text-slate-400 text-balance">Load two project files to compare actual print settings like speed, walls, and infill.</p>
                             </div>
                         )}
-                    </div>
+                    </main>
 
                     {/* Footer */}
                     <footer className="mt-12 mb-4 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-6">
