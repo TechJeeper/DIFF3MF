@@ -11,20 +11,6 @@
     <meta name="author" content="TechJeeper Designs">
     <link rel="canonical" href="https://diff3mf.com" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://diff3mf.com/">
-    <meta property="og:title" content="Diff3MF | Compare & Sync 3MF Slicer Settings">
-    <meta property="og:description" content="Instantly compare and transfer print settings between 3MF files. Optimized for Bambu Studio, OrcaSlicer, and PrusaSlicer.">
-    <meta property="og:image" content="https://techjeeper.com/wp-content/uploads/2024/01/diff3mf-preview.jpg">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://diff3mf.com/">
-    <meta property="twitter:title" content="Diff3MF | Compare & Sync 3MF Slicer Settings">
-    <meta property="twitter:description" content="The pro tool for 3D makers to sync slicer profiles across 3MF files. Works entirely in your browser.">
-    <meta property="twitter:image" content="https://techjeeper.com/wp-content/uploads/2024/01/diff3mf-preview.jpg">
-
     <!-- Structured Data for WebApp -->
     <script type="application/ld+json">
     {
@@ -57,7 +43,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
-        /* Hidden H1 for SEO without breaking UI */
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     </style>
 </head>
@@ -70,9 +55,9 @@
 
         // --- Helpers & Logic ---
         const CATEGORY_MAP = {
-            'Quality': ['layer_height', 'width', 'line_width', 'precision', 'resolution', 'seam', 'fuzzy', 'ironing'],
+            'Quality': ['layer_height', 'width', 'line_width', 'precision', 'resolution', 'seam', 'fuzzy', 'ironing', 'scarf'],
             'Strength': ['wall', 'perimeter', 'infill', 'shell', 'top_surface', 'bottom_surface', 'sparse', 'solid', 'loops'],
-            'Speed': ['speed', 'accel', 'jerk', 'time', 'travel', 'volumetric', 'jerk'],
+            'Speed': ['speed', 'accel', 'jerk', 'time', 'travel', 'volumetric'],
             'Support': ['support', 'brim', 'raft', 'skirt', 'adhesion', 'tree'],
             'Cooling': ['fan', 'cool', 'temp', 'bed', 'chamber', 'overhang_speed'],
             'Filament': ['filament', 'retract', 'flow', 'pressure_advance', 'k_value', 'nozzle', 'diameter', 'density'],
@@ -102,6 +87,7 @@
             return data;
         };
 
+        // Improved flattener that marks arrays
         const flattenJSON = (obj, prefix = '') => {
             let res = {};
             for (const [key, value] of Object.entries(obj)) {
@@ -109,7 +95,12 @@
                 if (value && typeof value === 'object' && !Array.isArray(value)) {
                     Object.assign(res, flattenJSON(value, newKey));
                 } else {
-                    res[newKey] = Array.isArray(value) ? value.join(', ') : String(value);
+                    // Store the raw value and a string version for display
+                    res[newKey] = {
+                        display: Array.isArray(value) ? value.join(', ') : String(value),
+                        raw: value,
+                        isMulti: Array.isArray(value)
+                    };
                 }
             }
             return res;
@@ -124,7 +115,8 @@
                 if (eqIdx === -1) return line;
                 const key = line.substring(0, eqIdx).trim();
                 if (updatedMap.hasOwnProperty(key)) {
-                    return `${key} = ${updatedMap[key]}`;
+                    const val = updatedMap[key].raw;
+                    return `${key} = ${Array.isArray(val) ? val.join(';') : val}`;
                 }
                 return line;
             }).join('\n');
@@ -166,7 +158,18 @@
                             } catch(e) {}
                         }
                         if (Object.keys(parsed).length === 0) {
-                            parsed = parseINI(text);
+                            // Convert INI to our standard object format
+                            const rawIni = parseINI(text);
+                            Object.keys(rawIni).forEach(k => {
+                                // Slicers use semicolons for INI arrays
+                                const val = rawIni[k];
+                                const isArray = val.includes(';');
+                                parsed[k] = {
+                                    display: isArray ? val.split(';').join(', ') : val,
+                                    raw: isArray ? val.split(';') : val,
+                                    isMulti: isArray
+                                };
+                            });
                         }
                         if (Object.keys(parsed).length > 0) {
                             configs[path] = { parsed, raw: text, isJson };
@@ -196,6 +199,9 @@
                 setFileB(prev => {
                     const newConfigs = { ...prev.configs };
                     if (!newConfigs[path]) return prev;
+                    
+                    // Intelligent transfer: If target expects a single value but source is an array,
+                    // we port the first value. If both are same structure, port exactly.
                     newConfigs[path].parsed[key] = valA;
                     return { ...prev, configs: newConfigs };
                 });
@@ -207,7 +213,10 @@
                 for (const [path, config] of Object.entries(fileB.configs)) {
                     let updatedText = "";
                     if (config.isJson) {
-                        updatedText = JSON.stringify(config.parsed, null, 2);
+                        // Create unflattened map for export
+                        const exportMap = {};
+                        Object.keys(config.parsed).forEach(k => exportMap[k] = config.parsed[k].raw);
+                        updatedText = JSON.stringify(exportMap, null, 2);
                     } else {
                         updatedText = updateINI(config.raw, config.parsed);
                     }
@@ -232,7 +241,7 @@
                     keys.forEach(key => {
                         const vA = cA[key];
                         const vB = cB[key];
-                        const isDiff = vA !== vB;
+                        const isDiff = vA?.display !== vB?.display;
                         const cat = getCategory(key);
                         if (showOnlyDiffs && !isDiff) return;
                         if (activeTab !== 'All' && cat !== activeTab) return;
@@ -245,7 +254,6 @@
 
             return (
                 <div className="min-h-screen flex flex-col p-4 md:p-8 max-w-7xl mx-auto">
-                    {/* Main Content Area */}
                     <main className="flex-1">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 text-center md:text-left">
                             <header>
@@ -313,7 +321,7 @@
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/50">
                                             {diffList.length === 0 ? (
-                                                <tr><td colSpan={4} className="p-20 text-center text-slate-600 italic text-balance">No slicer settings found matching your criteria. Try adjusting your filters.</td></tr>
+                                                <tr><td colSpan={4} className="p-20 text-center text-slate-600 italic">No slicer settings match your criteria.</td></tr>
                                             ) : (
                                                 diffList.map((item, idx) => (
                                                     <tr key={`${item.path}-${item.key}-${idx}`} className="group hover:bg-slate-800/30 transition-colors">
@@ -322,12 +330,14 @@
                                                                 <div className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${item.cat === 'Others' ? 'bg-slate-800 text-slate-500' : 'bg-blue-500/20 text-blue-400'}`}>
                                                                     {item.cat}
                                                                 </div>
-                                                                <div className="text-[9px] text-slate-600 font-mono italic">{item.path.split('/').pop()}</div>
+                                                                {(item.vA?.isMulti || item.vB?.isMulti) && (
+                                                                    <div className="text-[8px] px-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded font-black uppercase">Multi-Filament</div>
+                                                                )}
                                                             </div>
                                                             <div className="mono text-[11px] text-slate-200 break-all font-semibold">{item.key}</div>
                                                         </td>
                                                         <td className={`p-4 mono text-[11px] ${item.isDiff ? 'text-blue-400 font-bold' : 'text-slate-500'}`}>
-                                                            {item.vA ?? <span className="opacity-20 italic">Empty</span>}
+                                                            {item.vA?.display ?? <span className="opacity-20 italic">Empty</span>}
                                                         </td>
                                                         <td className="p-4 text-center">
                                                             {item.isDiff && (
@@ -337,7 +347,7 @@
                                                             )}
                                                         </td>
                                                         <td className={`p-4 mono text-[11px] ${item.isDiff ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                                                            {item.vB ?? <span className="opacity-20 italic">Empty</span>}
+                                                            {item.vB?.display ?? <span className="opacity-20 italic">Empty</span>}
                                                         </td>
                                                     </tr>
                                                 ))
@@ -355,7 +365,6 @@
                         )}
                     </main>
 
-                    {/* Footer */}
                     <footer className="mt-12 mb-4 pt-8 border-t border-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="text-slate-500 text-sm font-medium flex items-center gap-2">
                             <span>Project by</span>
